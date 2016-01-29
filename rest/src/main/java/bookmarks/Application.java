@@ -1,6 +1,6 @@
 package bookmarks;
 
-static import dmitri.util.optional.*;
+import static  dmitri.util.optional.IfPresentOrElse.ifPresentOrElse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -73,7 +73,8 @@ class BookmarkRestController {
     @RequestMapping(method = RequestMethod.POST)
     ResponseEntity<?> add(@PathVariable String userName, @RequestBody Bookmark userBookmark) {
     	System.out.println("accountRepository.findByUsername(userName): " + accountRepository.findByUsername(userName));
-         return accountRepository.findByUsername(userName).map(
+         return ifPresentOrElse( accountRepository.findByUsername(userName),
+        		
                 account -> {
                     Bookmark savedBookmark = bookmarkRepository.save(new Bookmark(account, userBookmark.uri, userBookmark.description));
 
@@ -85,15 +86,8 @@ class BookmarkRestController {
                     System.out.println("add() in map savedBookmark.id:" + savedBookmark.id);
                     System.out.println("add() in map savedBookmark.account:" + savedBookmark.account);
                     return new ResponseEntity<>(null, httpHeaders, HttpStatus.CREATED);
-                }
-        //).orElseThrow(() -> new RuntimeException("could not find the user '" + userId + "'"));
-        //).orElseThrow(() -> new NotFoundException("could not find the user '" + userName + "'"));
-          ).orElse(
-        		  addNewUser(userName,userBookmark)
-          );
-        
-              
-
+                },
+                () ->  		  addNewUser(userName,userBookmark));
     }
     
 //    @RequestMapping(method = RequestMethod.POST)
