@@ -1,6 +1,5 @@
 package bookmarks;
 
-import static  dmitri.util.optional.IfPresentOrElse.ifPresentOrElse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -24,6 +23,7 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -72,22 +72,24 @@ class BookmarkRestController {
     
     @RequestMapping(method = RequestMethod.POST)
     ResponseEntity<?> add(@PathVariable String userName, @RequestBody Bookmark userBookmark) {
-    	System.out.println("accountRepository.findByUsername(userName): " + accountRepository.findByUsername(userName));
-         return ifPresentOrElse( accountRepository.findByUsername(userName),
-        		
-                account -> {
-                    Bookmark savedBookmark = bookmarkRepository.save(new Bookmark(account, userBookmark.uri, userBookmark.description));
+    	Optional<Account> account = accountRepository.findByUsername(userName);
+    	
+        if(account.isPresent()){
+        	account.map(
+        
+                (acctValue) -> {
+                    Bookmark savedBookmark = bookmarkRepository.save(new Bookmark(acctValue, userBookmark.uri, userBookmark.description));
 
                     HttpHeaders httpHeaders = new HttpHeaders();
                     httpHeaders.setLocation(ServletUriComponentsBuilder.fromCurrentRequest().path("/{userName}")
                             .buildAndExpand(savedBookmark.id)
                             .toUri());
-                    System.out.println("add() in map userName:" + userName);
-                    System.out.println("add() in map savedBookmark.id:" + savedBookmark.id);
-                    System.out.println("add() in map savedBookmark.account:" + savedBookmark.account);
                     return new ResponseEntity<>(null, httpHeaders, HttpStatus.CREATED);
-                },
-                () ->  		  addNewUser(userName,userBookmark));
+                });
+        }else{
+        	return addNewUser(userName,userBookmark);
+        };     
+        return null;
     }
     
 //    @RequestMapping(method = RequestMethod.POST)
