@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
 @ComponentScan
 @EnableAutoConfiguration
 public class Application  extends SpringBootServletInitializer{
-	 {
-		    System.out.println("In rest Application");
-		    }
 	 @Override
 	    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
 	        return application.sources(Application.class);
@@ -53,7 +50,6 @@ public class Application  extends SpringBootServletInitializer{
     }
 
     public static void main(String[] args) {
-    	 System.out.println("In rest main");
     String[] myargs = {"arg1","arg2"};
         SpringApplication.run(Application.class, myargs);
     }
@@ -73,9 +69,9 @@ class BookmarkRestController {
     @RequestMapping(method = RequestMethod.POST)
     ResponseEntity<?> add(@PathVariable String userName, @RequestBody Bookmark userBookmark) {
     	Optional<Account> account = accountRepository.findByUsername(userName);
-    	
+    	 ResponseEntity<Object> postedResponseEntity;
         if(account.isPresent()){
-        	account.map(
+        	postedResponseEntity = account.map(
         
                 (acctValue) -> {
                     Bookmark savedBookmark = bookmarkRepository.save(new Bookmark(acctValue, userBookmark.uri, userBookmark.description));
@@ -85,39 +81,23 @@ class BookmarkRestController {
                             .buildAndExpand(savedBookmark.id)
                             .toUri());
                     return new ResponseEntity<>(null, httpHeaders, HttpStatus.CREATED);
-                });
+                })
+//        	        //).orElseThrow(() -> new RuntimeException("could not find the user '" + userId + "'"));
+//        	        ).orElseThrow(() -> new NotFoundException("could not find the user '" + userId + "'"));
+     	              	
+        		.get();
+        	 
         }else{
-        	return addNewUser(userName,userBookmark);
+        	postedResponseEntity = addNewUser(userName,userBookmark);
         };     
-        return null;
+        return postedResponseEntity;
     }
     
-//    @RequestMapping(method = RequestMethod.POST)
-//    ResponseEntity<?> addUser( @RequestBody Bookmark input) {
-//    	Account account = accountRepository.save(new Account(a, "password"));
-//        return accountRepository.findByUsername(userId).map(
-//                account -> {
-//                    Bookmark result = bookmarkRepository.save(new Bookmark(account, input.uri, input.description));
-//
-//                    HttpHeaders httpHeaders = new HttpHeaders();
-//                    httpHeaders.setLocation(ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
-//                            .buildAndExpand(result.id)
-//                            .toUri());
-//                    return new ResponseEntity<>(null, httpHeaders, HttpStatus.CREATED);
-//                }
-//        //).orElseThrow(() -> new RuntimeException("could not find the user '" + userId + "'"));
-//        ).orElseThrow(() -> new NotFoundException("could not find the user '" + userId + "'"));
-//              
-
-//    }
 
 
     private ResponseEntity<Object> addNewUser(String userName, Bookmark userBookmark) {
     	 Account account = accountRepository.save(new Account(userName, "password"));
          Bookmark savedBookmark = bookmarkRepository.save(new Bookmark(account, userBookmark.uri, userBookmark.description));
-         System.out.println("addNewUser() userName:" + userName);
-         System.out.println("addNewUser() savedBookmark.id:" + savedBookmark.id);
-         System.out.println("addNewUser() savedBookmark.account:" + savedBookmark.account);
          HttpHeaders httpHeaders = new HttpHeaders();
          httpHeaders.setLocation(ServletUriComponentsBuilder.fromCurrentRequest().path("/{userName}")
                  .buildAndExpand(savedBookmark.id)
@@ -128,21 +108,15 @@ class BookmarkRestController {
 
 	@RequestMapping(value = "/{bookmarkId}", method = RequestMethod.GET)
     Bookmark readBookmark(@PathVariable Long bookmarkId) {
-    	System.out.println("In readBookmark");
         return this.bookmarkRepository.findOne(bookmarkId);
     }
 
    @RequestMapping(method = RequestMethod.GET)
    Collection<Bookmark> readBookmarks(@PathVariable String userName) {
-	   System.out.println("In readBookmarks");
        return bookmarkRepository.findByAccountUsername(userName);
    }
     
-//    @RequestMapping(value = "/test", method = RequestMethod.GET)
-//    Collection<Bookmark> readBookmarks(@PathVariable String userId) {
-//    	System.out.println("In test");
-//        return bookmarkRepository.findByAccountUsername(userId);
-//    }
+
 
     @Autowired
     BookmarkRestController(BookmarkRepository bookmarkRepository, AccountRepository accountRepository) {
