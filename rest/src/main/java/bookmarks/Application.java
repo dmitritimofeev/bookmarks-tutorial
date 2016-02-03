@@ -1,31 +1,40 @@
 package bookmarks;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.context.web.SpringBootServletInitializer;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartResolver;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
-import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.context.web.SpringBootServletInitializer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.ResourceSupport;
+import org.springframework.hateoas.Resources;
+import org.springframework.hateoas.VndErrors;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 @Configuration
 @ComponentScan
@@ -55,16 +64,29 @@ public class Application  extends SpringBootServletInitializer{
     }
 }
 
+class BookmarkResource extends ResourceSupport {
+
+    private final Bookmark bookmark;
+
+    public BookmarkResource(Bookmark bookmark) {
+        String username = bookmark.account.username;
+        this.bookmark = bookmark;
+        this.add(new Link(bookmark.uri, "bookmark-uri"));
+        this.add(linkTo(BookmarkRestController.class, username).withRel("bookmarks"));
+        this.add(linkTo(methodOn(BookmarkRestController.class, username).readBookmark(username,bookmark.id)).withSelfRel());
+    }
+
+    public Bookmark getBookmark() {
+        return bookmark;
+    }
+}
+
 @RestController
 @RequestMapping("/{userName}/bookmarks")
 class BookmarkRestController {
 
     private final BookmarkRepository bookmarkRepository;
     private final AccountRepository accountRepository;
-    static
-    {
-    System.out.println("In BookmarkRestController");
-    }
     
     @RequestMapping(method = RequestMethod.POST)
     ResponseEntity<?> add(@PathVariable String userName, @RequestBody Bookmark userBookmark) {
@@ -107,14 +129,27 @@ class BookmarkRestController {
 	}
 
 	@RequestMapping(value = "/{bookmarkId}", method = RequestMethod.GET)
-    Bookmark readBookmark(@PathVariable Long bookmarkId) {
-        return this.bookmarkRepository.findOne(bookmarkId);
+    BookmarkResource readBookmark(@PathVariable String userId,@PathVariable Long bookmarkId) {
+        //return this.bookmarkRepository.findOne(bookmarkId);
+		this.validateUser(userId);
+        return new BookmarkResource(this.bookmarkRepository.findOne(bookmarkId));
     }
 
    @RequestMapping(method = RequestMethod.GET)
-   Collection<Bookmark> readBookmarks(@PathVariable String userName) {
-       return bookmarkRepository.findByAccountUsername(userName);
+  // Collection<Bookmark> readBookmarks(@PathVariable String userName) {
+   //    return bookmarkRepository.findByAccountUsername(userName);
+   Resources<BookmarkResource> readBookmarks(@PathVariable String userId) {
+
+       this.validateUser(userId);
+
+       List<BookmarkResource> bookmarkResourceList = bookmarkRepository.findByAccountUsername(userId)
+               .stream()
+               .map(BookmarkResource::new)
+               .collect(Collectors.toList());
+       return new Resources<BookmarkResource>(bookmarkResourceList);
    }
+
+   
     
 
 
@@ -123,4 +158,29 @@ class BookmarkRestController {
         this.bookmarkRepository = bookmarkRepository;
         this.accountRepository = accountRepository;
     }
+
+
+private void validateUser(String userId) {
+    this.accountRepository.findByUsername(userId)
+            .orElseThrow(() -> new UserNotFoundException(userId));
+}
+}
+
+@ControllerAdvice
+class BookmarkControllerAdvice {
+
+@ResponseBody
+@ExceptionHandler(UserNotFoundException.class)
+@ResponseStatus(HttpStatus.NOT_FOUND)
+VndErrors userNotFoundExceptionHandler(UserNotFoundException ex) {
+    return new VndErrors("error", ex.getMessage());
+}
+}
+
+
+class UserNotFoundException extends RuntimeException {
+
+public UserNotFoundException(String userId) {
+    super("could not find user '" + userId + "'.");
+}
 }
