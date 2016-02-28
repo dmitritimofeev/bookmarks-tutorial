@@ -21,6 +21,7 @@ import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.VndErrors;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -88,7 +89,7 @@ class BookmarkRestController {
     private final BookmarkRepository bookmarkRepository;
     private final AccountRepository accountRepository;
     
-    @RequestMapping(method = RequestMethod.POST)
+    @RequestMapping(method = RequestMethod.POST )
     ResponseEntity<?> add(@PathVariable String userName, @RequestBody Bookmark userBookmark) {
     	Optional<Account> account = accountRepository.findByUsername(userName);
     	 ResponseEntity<Object> postedResponseEntity;
@@ -104,8 +105,8 @@ class BookmarkRestController {
                             .toUri());
                     return new ResponseEntity<>(null, httpHeaders, HttpStatus.CREATED);
                 })
-//        	        //).orElseThrow(() -> new RuntimeException("could not find the user '" + userId + "'"));
-//        	        ).orElseThrow(() -> new NotFoundException("could not find the user '" + userId + "'"));
+//        	        //).orElseThrow(() -> new RuntimeException("could not find the user '" + userName + "'"));
+//        	        ).orElseThrow(() -> new NotFoundException("could not find the user '" + userName + "'"));
      	              	
         		.get();
         	 
@@ -128,21 +129,21 @@ class BookmarkRestController {
 
 	}
 
-	@RequestMapping(value = "/{bookmarkId}", method = RequestMethod.GET)
-    BookmarkResource readBookmark(@PathVariable String userId,@PathVariable Long bookmarkId) {
+	@RequestMapping(value = "/{bookmarkId}", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE, "application/hal+json"})
+    BookmarkResource readBookmark(@PathVariable String userName,@PathVariable Long bookmarkId) {
         //return this.bookmarkRepository.findOne(bookmarkId);
-		this.validateUser(userId);
+		this.validateUser(userName);
         return new BookmarkResource(this.bookmarkRepository.findOne(bookmarkId));
     }
 
-   @RequestMapping(method = RequestMethod.GET)
+   @RequestMapping(method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE, "application/hal+json"})
   // Collection<Bookmark> readBookmarks(@PathVariable String userName) {
    //    return bookmarkRepository.findByAccountUsername(userName);
-   Resources<BookmarkResource> readBookmarks(@PathVariable String userId) {
+   Resources<BookmarkResource> readBookmarks(@PathVariable String userName) {
 
-       this.validateUser(userId);
+       this.validateUser(userName);
 
-       List<BookmarkResource> bookmarkResourceList = bookmarkRepository.findByAccountUsername(userId)
+       List<BookmarkResource> bookmarkResourceList = bookmarkRepository.findByAccountUsername(userName)
                .stream()
                .map(BookmarkResource::new)
                .collect(Collectors.toList());
@@ -160,9 +161,9 @@ class BookmarkRestController {
     }
 
 
-private void validateUser(String userId) {
-    this.accountRepository.findByUsername(userId)
-            .orElseThrow(() -> new UserNotFoundException(userId));
+private void validateUser(String userName) {
+    this.accountRepository.findByUsername(userName)
+            .orElseThrow(() -> new UserNotFoundException(userName));
 }
 }
 
@@ -180,7 +181,7 @@ VndErrors userNotFoundExceptionHandler(UserNotFoundException ex) {
 
 class UserNotFoundException extends RuntimeException {
 
-public UserNotFoundException(String userId) {
-    super("could not find user '" + userId + "'.");
+public UserNotFoundException(String userName) {
+    super("could not find user '" + userName + "'.");
 }
 }
