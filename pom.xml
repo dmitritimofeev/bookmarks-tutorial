@@ -10,15 +10,13 @@
         <version>1.3.1.RELEASE</version>
     </parent>
 
-    <groupId>bookmarks</groupId>
+    <groupId>bookmarks-web</groupId>
     <artifactId>bookmarks</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
         <module>rest</module>
-        <module>security</module>
         <module>model</module>
-        <module>hateoas</module>
     </modules>
     
     <properties>
