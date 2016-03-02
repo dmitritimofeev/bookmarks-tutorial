@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -34,9 +35,6 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 
-/**
- * @author Josh Long
- */
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
 @WebAppConfiguration
@@ -87,41 +85,43 @@ public class BookmarkRestControllerTest {
         this.bookmarkList.add(bookmarkRepository.save(new Bookmark(account, "http://bookmark.com/1/" + userName, "A description")));
         this.bookmarkList.add(bookmarkRepository.save(new Bookmark(account, "http://bookmark.com/2/" + userName, "A description")));
     }
-    @Ignore
+  
     @Test
     public void userNotFound() throws Exception {
-       mockMvc.perform(post("/george/bookmarks/")
-               .content(this.json(new Bookmark()))    
-               .contentType(contentType))
+       mockMvc.perform(get("/dmitri/bookmarks/"
+    		   + this.bookmarkList.get(0).id))  
                .andExpect(status().isNotFound());
     }
 
-    @Ignore
+    
     @Test
     public void readSingleBookmark() throws Exception {
         mockMvc.perform(get("/" + userName + "/bookmarks/"
                 + this.bookmarkList.get(0).id))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(contentType))
-                .andExpect(jsonPath("$.id", is(this.bookmarkList.get(0).id.intValue())))
-                .andExpect(jsonPath("$.uri", is("http://bookmark.com/1/" + userName)))
-                .andExpect(jsonPath("$.description", is("A description")));
+                .andExpect(jsonPath("$.bookmark.id", is(this.bookmarkList.get(0).id.intValue())))
+                .andExpect(jsonPath("$.bookmark.uri", is("http://bookmark.com/1/" + userName)))
+                .andExpect(jsonPath("$.bookmark.description", is("A description")));
     }
-    @Ignore
+   
     @Test
     public void readBookmarks() throws Exception {
         mockMvc.perform(get("/" + userName + "/bookmarks"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(contentType))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id", is(this.bookmarkList.get(0).id.intValue())))
-                .andExpect(jsonPath("$[0].uri", is("http://bookmark.com/1/" + userName)))
-                .andExpect(jsonPath("$[0].description", is("A description")))
-                .andExpect(jsonPath("$[1].id", is(this.bookmarkList.get(1).id.intValue())))
-                .andExpect(jsonPath("$[1].uri", is("http://bookmark.com/2/" + userName)))
-                .andExpect(jsonPath("$[1].description", is("A description")));
+             //   .andExpect(jsonPath("$", hasSize(2)))
+               //jsonpath always returns an array so it's value can not be compared directly with other types (if they are not arrays themself) 
+               //the following line does not work : expected <15> but was <[15]>
+               //.andExpect(jsonPath("$..bookmarkResourceList[0].bookmark.id", is(this.bookmarkList.get(0).id.intValue())))
+                .andExpect(jsonPath("$..bookmarkResourceList[0].bookmark.id", hasItem(this.bookmarkList.get(0).id.intValue())))
+                .andExpect(jsonPath("$..bookmarkResourceList[0].bookmark.uri", hasItem("http://bookmark.com/1/" + userName)))
+                .andExpect(jsonPath("$..bookmarkResourceList[0].bookmark.description", hasItem("A description")))
+                .andExpect(jsonPath("$..bookmarkResourceList[1].bookmark.id", hasItem(this.bookmarkList.get(1).id.intValue())))
+                .andExpect(jsonPath("$..bookmarkResourceList[1].bookmark.uri", hasItem("http://bookmark.com/2/" + userName)))
+                .andExpect(jsonPath("$..bookmarkResourceList[1].bookmark.description", hasItem("A description")));
     }
-    @Ignore
+
     @Test
     public void createBookmark() throws Exception {
         String bookmarkJson = json(new Bookmark(

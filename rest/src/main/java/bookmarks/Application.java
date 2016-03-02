@@ -129,14 +129,14 @@ class BookmarkRestController {
 
 	}
 
-	@RequestMapping(value = "/{bookmarkId}", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE, "application/hal+json"})
+	@RequestMapping(value = "/{bookmarkId}", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_UTF8_VALUE, "application/hal+json"})
     BookmarkResource readBookmark(@PathVariable String userName,@PathVariable Long bookmarkId) {
         //return this.bookmarkRepository.findOne(bookmarkId);
 		this.validateUser(userName);
         return new BookmarkResource(this.bookmarkRepository.findOne(bookmarkId));
     }
 
-   @RequestMapping(method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE, "application/hal+json"})
+   @RequestMapping(method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_UTF8_VALUE, "application/hal+json"})
   // Collection<Bookmark> readBookmarks(@PathVariable String userName) {
    //    return bookmarkRepository.findByAccountUsername(userName);
    Resources<BookmarkResource> readBookmarks(@PathVariable String userName) {

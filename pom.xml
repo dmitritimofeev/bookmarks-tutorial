@@ -17,6 +17,7 @@
     <modules>
         <module>rest</module>
         <module>model</module>
+        <module>client</module>
     </modules>
     
     <properties>
